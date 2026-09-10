@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 import db
 from states import Registration
 from keyboards import (
-    gender_kb, looking_for_kb, skip_kb, flaws_multiselect_kb, main_menu_kb,
+    gender_kb, looking_for_kb, skip_kb, flaws_multiselect_kb, main_menu_reply_kb,
 )
 from flaws_data import get_flaw_label
 
@@ -15,14 +15,15 @@ router = Router()
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
-    # обновляем username при каждом /start — он мог поменяться или появиться позже
+    # обновляем username при каждом /start — он мог появиться или измениться позже
     db.upsert_user(message.from_user.id, username=message.from_user.username or "")
 
     user = db.get_user(message.from_user.id)
     if user and user["is_profile_complete"]:
+        await state.clear()
         await message.answer(
             "С возвращением! 👋\nЧто хотите сделать?",
-            reply_markup=main_menu_kb(),
+            reply_markup=main_menu_reply_kb(),
         )
         return
 
@@ -233,6 +234,6 @@ async def _finish_registration(message: Message, state: FSMContext):
     await message.answer(
         f"Готово! 🎉 Твоя анкета сохранена.\n\nТвои недостатки: {flaws_txt}\n\n"
         "Теперь можешь смотреть анкеты других.",
-        reply_markup=main_menu_kb(),
+        reply_markup=main_menu_reply_kb(),
     )
     await state.clear()

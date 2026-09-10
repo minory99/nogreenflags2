@@ -1,17 +1,16 @@
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 
 import db
 from states import EditProfile
 from keyboards import (
-    edit_menu_kb, gender_kb, looking_for_kb, flaws_multiselect_kb, main_menu_kb,
+    edit_menu_kb, gender_kb, looking_for_kb, flaws_multiselect_kb, main_menu_reply_kb,
 )
 from flaws_data import get_flaw_label
 
 router = Router()
 
-# Поля, которые редактируются простым текстовым сообщением
 TEXT_FIELDS = {
     "name": "Введи новое имя:",
     "age": "Введи новый возраст (числом, 16-99):",
@@ -37,7 +36,7 @@ async def edit_menu(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "edit:back")
 async def edit_back(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.answer("Ок, возвращаемся в меню.", reply_markup=main_menu_kb())
+    await callback.message.answer("Ок, возвращаемся в меню.", reply_markup=main_menu_reply_kb())
     await callback.answer()
 
 
@@ -48,7 +47,9 @@ async def edit_text_field_start(callback: CallbackQuery, state: FSMContext):
     field = callback.data.split(":")[1]
     await state.update_data(edit_field=field)
     await state.set_state(EditProfile.waiting_text)
-    await callback.message.answer(TEXT_FIELDS[field])
+    # временно прячем постоянную клавиатуру меню, чтобы её случайное нажатие
+    # не попало в это текстовое поле как новое значение
+    await callback.message.answer(TEXT_FIELDS[field], reply_markup=ReplyKeyboardRemove())
     await callback.answer()
 
 
@@ -65,7 +66,7 @@ async def edit_text_field_save(message: Message, state: FSMContext):
         value = int(value)
 
     db.upsert_user(message.from_user.id, **{field: value})
-    await message.answer(f"{FIELD_LABELS[field]} обновлено(а) ✅", reply_markup=main_menu_kb())
+    await message.answer(f"{FIELD_LABELS[field]} обновлено(а) ✅", reply_markup=main_menu_reply_kb())
     await state.clear()
 
 
@@ -83,7 +84,7 @@ async def edit_gender_save(callback: CallbackQuery, state: FSMContext):
     gender = callback.data.split(":")[1]
     db.upsert_user(callback.from_user.id, gender=gender)
     await callback.message.edit_text("Пол обновлён ✅")
-    await callback.message.answer("Готово!", reply_markup=main_menu_kb())
+    await callback.message.answer("Готово!", reply_markup=main_menu_reply_kb())
     await state.clear()
     await callback.answer()
 
@@ -100,7 +101,7 @@ async def edit_looking_for_save(callback: CallbackQuery, state: FSMContext):
     lf = callback.data.split(":")[1]
     db.upsert_user(callback.from_user.id, looking_for=lf)
     await callback.message.edit_text("Предпочтения обновлены ✅")
-    await callback.message.answer("Готово!", reply_markup=main_menu_kb())
+    await callback.message.answer("Готово!", reply_markup=main_menu_reply_kb())
     await state.clear()
     await callback.answer()
 
@@ -110,7 +111,7 @@ async def edit_looking_for_save(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "edit:photo")
 async def edit_photo_start(callback: CallbackQuery, state: FSMContext):
     await state.set_state(EditProfile.waiting_photo)
-    await callback.message.answer("Пришли новое фото:")
+    await callback.message.answer("Пришли новое фото:", reply_markup=ReplyKeyboardRemove())
     await callback.answer()
 
 
@@ -118,7 +119,7 @@ async def edit_photo_start(callback: CallbackQuery, state: FSMContext):
 async def edit_photo_save(message: Message, state: FSMContext):
     photo_id = message.photo[-1].file_id
     db.upsert_user(message.from_user.id, photo_file_id=photo_id)
-    await message.answer("Фото обновлено ✅", reply_markup=main_menu_kb())
+    await message.answer("Фото обновлено ✅", reply_markup=main_menu_reply_kb())
     await state.clear()
 
 
@@ -164,12 +165,12 @@ async def edit_flaws_done(callback: CallbackQuery, state: FSMContext):
     db.set_user_flaws(callback.from_user.id, selected)
     flaws_txt = ", ".join(get_flaw_label(f) for f in selected)
     await callback.message.edit_text(f"Недостатки обновлены ✅\n{flaws_txt}")
-    await callback.message.answer("Готово!", reply_markup=main_menu_kb())
+    await callback.message.answer("Готово!", reply_markup=main_menu_reply_kb())
     await state.clear()
     await callback.answer()
 
 
-# ---------- Толерантность (что готов терпеть) ----------
+# ---------- Толерантность ----------
 
 @router.callback_query(F.data == "edit:tolerance")
 async def edit_tolerance_start(callback: CallbackQuery, state: FSMContext):
@@ -207,6 +208,6 @@ async def edit_tolerance_done(callback: CallbackQuery, state: FSMContext):
     db.set_user_tolerance(callback.from_user.id, selected)
     tol_txt = ", ".join(get_flaw_label(f) for f in selected)
     await callback.message.edit_text(f"Толерантность обновлена ✅\n{tol_txt}")
-    await callback.message.answer("Готово!", reply_markup=main_menu_kb())
+    await callback.message.answer("Готово!", reply_markup=main_menu_reply_kb())
     await state.clear()
     await callback.answer()

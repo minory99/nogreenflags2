@@ -16,7 +16,7 @@ class Registration(StatesGroup):
 
 
 class EditProfile(StatesGroup):
-    waiting_text = State()      # общее состояние для имени/возраста/города/био
+    waiting_text = State()
     waiting_photo = State()
     gender_select = State()
     looking_for_select = State()

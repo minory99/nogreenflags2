@@ -9,7 +9,5 @@ if not BOT_TOKEN:
 
 DB_PATH = os.getenv("DB_PATH", "flawmatch.db")
 
-# Порог совместимости (0.0 - 1.0), ниже которого мэтч не показывается вообще
 MIN_COMPAT_THRESHOLD = 0.34
-# Порог, выше которого мэтч считается "хорошим" (для отображения бейджа)
 GOOD_COMPAT_THRESHOLD = 0.65

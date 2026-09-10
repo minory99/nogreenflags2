@@ -9,16 +9,16 @@ CREATE TABLE IF NOT EXISTS users (
     user_id         INTEGER PRIMARY KEY,
     name            TEXT,
     age             INTEGER,
-    gender          TEXT,               -- 'M' / 'F' / 'other'
-    looking_for     TEXT,               -- 'M' / 'F' / 'any'
+    gender          TEXT,
+    looking_for     TEXT,
     bio             TEXT,
     photo_file_id   TEXT,
-    custom_flaws    TEXT,               -- свободный текст, доп. недостатки
-    custom_tolerance TEXT,              -- свободный текст, что ещё готов терпеть
+    custom_flaws    TEXT,
+    custom_tolerance TEXT,
     city            TEXT,
-    username        TEXT,               -- @username в Telegram, для обмена контактом
+    username        TEXT,
     is_profile_complete INTEGER DEFAULT 0,
-    is_active       INTEGER DEFAULT 1,  -- 0 = скрыт из поиска
+    is_active       INTEGER DEFAULT 1,
     created_at      TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS user_tolerance (
 CREATE TABLE IF NOT EXISTS actions (
     from_id     INTEGER,
     to_id       INTEGER,
-    action      TEXT,   -- 'like' / 'pass'
+    action      TEXT,
     created_at  TEXT DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (from_id, to_id)
 );
@@ -60,7 +60,6 @@ CREATE TABLE IF NOT EXISTS reports (
 
 
 def _migrate_columns():
-    """Добавляет новые колонки в уже существующую (старую) базу данных, если их ещё нет."""
     with get_conn() as conn:
         existing_users_cols = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
         if "username" not in existing_users_cols:
@@ -89,8 +88,6 @@ def init_db():
     _migrate_columns()
 
 
-# ---------- Пользователи ----------
-
 def upsert_user(user_id: int, **fields):
     with get_conn() as conn:
         exists = conn.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,)).fetchone()
@@ -118,8 +115,6 @@ def get_user(user_id: int) -> Optional[sqlite3.Row]:
 def mark_profile_complete(user_id: int):
     upsert_user(user_id, is_profile_complete=1)
 
-
-# ---------- Недостатки ----------
 
 def set_user_flaws(user_id: int, flaw_ids: list[str]):
     with get_conn() as conn:
@@ -150,8 +145,6 @@ def get_user_tolerance(user_id: int) -> list[str]:
         rows = conn.execute("SELECT flaw_id FROM user_tolerance WHERE user_id = ?", (user_id,)).fetchall()
         return [r["flaw_id"] for r in rows]
 
-
-# ---------- Действия (лайк/пасс) ----------
 
 def record_action(from_id: int, to_id: int, action: str):
     with get_conn() as conn:
@@ -186,7 +179,6 @@ def get_seen_ids(user_id: int) -> set[int]:
 
 
 def get_candidates(user_id: int) -> list[sqlite3.Row]:
-    """Все анкеты кроме своей и уже просмотренных, с завершённым профилем."""
     seen = get_seen_ids(user_id)
     with get_conn() as conn:
         rows = conn.execute(

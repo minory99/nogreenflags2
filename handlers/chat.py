@@ -5,14 +5,12 @@ from aiogram.fsm.storage.base import StorageKey
 
 import db
 from states import Chatting
-from keyboards import chat_reply_kb, contact_link_kb, main_menu_kb, CONTACT_BTN_TEXT, END_CHAT_BTN_TEXT
+from keyboards import chat_reply_kb, contact_link_kb, main_menu_reply_kb, CONTACT_BTN_TEXT, END_CHAT_BTN_TEXT
 
 router = Router()
 
 
 def _partner_state(current_state: FSMContext, bot_id: int, partner_id: int) -> FSMContext:
-    """FSMContext собеседника в том же хранилище — чтобы автоматически перевести
-    его в режим чата, когда ему прилетает первое сообщение."""
     key = StorageKey(bot_id=bot_id, chat_id=partner_id, user_id=partner_id)
     return FSMContext(storage=current_state.storage, key=key)
 
@@ -34,8 +32,6 @@ async def chat_start(callback: CallbackQuery, state: FSMContext):
     )
     await callback.answer()
 
-
-# ---------- Reply-кнопки (обрабатываются раньше общей пересылки текста) ----------
 
 @router.message(Chatting.active, F.text == CONTACT_BTN_TEXT)
 async def share_contact(message: Message, state: FSMContext):
@@ -71,10 +67,8 @@ async def end_chat(message: Message, state: FSMContext):
         "Чат завершён. Переписку можно возобновить со страницы мэтча.",
         reply_markup=ReplyKeyboardRemove(),
     )
-    await message.answer("Что дальше?", reply_markup=main_menu_kb())
+    await message.answer("Что дальше?", reply_markup=main_menu_reply_kb())
 
-
-# ---------- Пересылка обычных сообщений ----------
 
 @router.message(Chatting.active)
 async def relay_message(message: Message, state: FSMContext):
@@ -99,7 +93,6 @@ async def relay_message(message: Message, state: FSMContext):
         await message.answer("Не получилось доставить сообщение — возможно, собеседник заблокировал бота.")
         return
 
-    # Автоматически включаем режим чата и у собеседника, чтобы его ответ долетел обратно
     partner_ctx = _partner_state(state, message.bot.id, partner_id)
     partner_data = await partner_ctx.get_data()
     if partner_data.get("chat_partner") != message.from_user.id:

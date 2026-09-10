@@ -1,23 +1,11 @@
-"""
-Логика подсчёта совместимости двух людей по принципу
-"взаимодополняемость + толерантность к недостаткам".
-
-score(A, B) = средняя из:
-  coverage_A = доля недостатков A, которые Б готов терпеть
-  coverage_B = доля недостатков Б, которые A готов терпеть
-
-Если у человека вообще не указано недостатков, его coverage считается 1.0
-(терпеть нечего, не наказываем пустой профиль).
-"""
-
 from dataclasses import dataclass
 
 
 @dataclass
 class CompatResult:
-    score: float          # 0.0 - 1.0
-    coverage_a: float     # насколько B терпит недостатки A
-    coverage_b: float     # насколько A терпит недостатки B
+    score: float
+    coverage_a: float
+    coverage_b: float
     a_flaws_covered: set
     b_flaws_covered: set
 
@@ -37,8 +25,8 @@ def compute_compatibility(
     b_flaws: list[str],
     b_tolerance: list[str],
 ) -> CompatResult:
-    coverage_a, a_covered = _coverage(a_flaws, b_tolerance)   # Б терпит недостатки А
-    coverage_b, b_covered = _coverage(b_flaws, a_tolerance)   # А терпит недостатки Б
+    coverage_a, a_covered = _coverage(a_flaws, b_tolerance)
+    coverage_b, b_covered = _coverage(b_flaws, a_tolerance)
 
     score = (coverage_a + coverage_b) / 2
     return CompatResult(
